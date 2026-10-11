@@ -1,0 +1,13 @@
+# Upload queue, seasons and monitoring
+
+Active uploads are grouped by title. Expand a title to see every submitted episode, including completed episodes, while any upload for that title is nonterminal. READY and CANCELLED are terminal; failed uploads remain visible until retried or cancelled. When all submitted uploads are terminal the title leaves the active queue. This does not wait for future, unsubmitted episodes. An ongoing series uploaded again later becomes active again.
+
+Upload history is a separate admin tab. Its date picker filters submission timestamps using the browser's local timezone, including daylight saving boundaries. Clear the date to browse all history. Results are paginated in groups of 100; titles may continue on the next page. No history is deleted by leaving the active queue.
+
+The Manage page groups episodes by expandable season, sorted by season and episode number.
+
+System monitor samples CPU, RAM, local disk and queue counts every five seconds. On Linux with cgroup v2 it reports container CPU and RAM against container limits; otherwise it falls back to operating-system measurements. CPU is an interval sample and the first sample may be unavailable. Disk represents the filesystem containing application data. HF public/private buckets are separate remote storage; manual refresh queries configured media buckets and the backup bucket only, at most once a minute. Inaccessible buckets are marked unavailable rather than counted as zero. This does not show unrelated account repositories or account quota.
+
+Anime series processing reads embedded chapter metadata. Opening/Intro/OP and Ending/Outro/ED/End credits markers with valid durations up to five minutes are recognized. Existing manual timing is preserved. Unknown chapter names and unmarked files are not guessed. Admins can edit intro and outro times. Auto-skip is a device preference, disabled by default, and only applies to local anime series playback. It jumps to the end of the marked interval, so content after ending credits is preserved. Google Cast receivers do not run this local auto-skip preference. Already processed files need manual timing edits; they are not automatically reprocessed.
+
+Deployment adds default-zero outro fields and supports restoring older encrypted backups. Local development needs `npm run db:push` before restarting the app; Space startup already applies the Prisma schema. Wait until current uploads are READY before deployment: an HF rebuild can interrupt workers and remove unfinished local processing/source files. Remote media and encrypted database/artwork backups do not include those unfinished files.

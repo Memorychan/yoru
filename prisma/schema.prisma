@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  name String
+  passwordHash String
+  role String @default("MEMBER")
+  disabled Boolean @default(false)
+  totpSecret String?
+  totpPending String?
+  recoveryHashes String[] @default([])
+  createdAt DateTime @default(now())
+  sessions Session[]
+  orders Order[]
+  entitlements Entitlement[]
+  saved Saved[]
+  progress Progress[]
+  playback Playback[]
+}
+model Session {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+}
+model Invite {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  email String?
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+}
+model Title {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  synopsis String
+  format String @default("MOVIE")
+  category String @default("ANIME")
+  genres String[]
+  languages String[]
+  year Int
+  ageRating String @default("13+")
+  poster String @default("/art/hero.png")
+  backdrop String @default("/art/hero.png")
+  status String @default("DRAFT")
+  featured Boolean @default(false)
+  showcase Boolean @default(false)
+  rightsNote String @default("")
+  availableUntil DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  episodes Episode[]
+  products Product[]
+  saved Saved[]
+  collectionItems CollectionItem[]
+}
+model Episode {
+  id String @id @default(cuid())
+  titleId String
+  title Title @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  name String
+  season Int @default(1)
+  number Int @default(1)
+  duration Float @default(0)
+  introStart Float @default(0)
+  introEnd Float @default(0)
+  outroStart Float @default(0)
+  outroEnd Float @default(0)
+  asset Asset?
+  uploads Upload[]
+  progress Progress[]
+  playback Playback[]
+  @@unique([titleId, season, number])
+}
+model Product {
+  id String @id @default(cuid())
+  titleId String
+  title Title @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  mode String @default("FREE")
+  pricePaise Int @default(0)
+  rentalHours Int @default(48)
+  active Boolean @default(true)
+  orders Order[]
+  entitlements Entitlement[]
+}
+model Order {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  productId String
+  product Product @relation(fields: [productId], references: [id])
+  providerOrderId String? @unique
+  paymentId String? @unique
+  amount Int
+  currency String @default("INR")
+  mode String
+  rentalHours Int
+  status String @default("CREATED")
+  createdAt DateTime @default(now())
+  entitlement Entitlement?
+}
+model Entitlement {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  productId String
+  product Product @relation(fields: [productId], references: [id])
+  orderId String @unique
+  order Order @relation(fields: [orderId], references: [id])
+  expiresAt DateTime?
+  revoked Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@index([userId, productId])
+}
+model WebhookEvent {
+  id String @id
+  createdAt DateTime @default(now())
+}
+model Storage {
+  id String @id @default(cuid())
+  name String
+  bucket String
+  tokenEncrypted String
+  enabled Boolean @default(true)
+  health String @default("UNCHECKED")
+  createdAt DateTime @default(now())
+  assets Asset[]
+  uploads Upload[]
+  replicas AssetReplica[]
+  transfers Transfer[]
+}
+model Asset {
+  id String @id @default(cuid())
+  episodeId String @unique
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  storageId String
+  storage Storage @relation(fields: [storageId], references: [id])
+  keyEncrypted String
+  manifest Json
+  bytes BigInt @default(0)
+  createdAt DateTime @default(now())
+  replicas AssetReplica[]
+  transfers Transfer[]
+}
+model AssetReplica {
+  id String @id @default(cuid())
+  assetId String
+  asset Asset @relation(fields:[assetId],references:[id],onDelete:Cascade)
+  storageId String
+  storage Storage @relation(fields:[storageId],references:[id])
+  createdAt DateTime @default(now())
+  @@unique([assetId,storageId])
+}
+model Transfer {
+  id String @id @default(cuid())
+  assetId String
+  asset Asset @relation(fields:[assetId],references:[id],onDelete:Cascade)
+  storageId String
+  storage Storage @relation(fields:[storageId],references:[id])
+  mode String
+  state String @default("QUEUED")
+  progress Int @default(0)
+  error String?
+  createdAt DateTime @default(now())
+}
+model Upload {
+  id String @id @default(cuid())
+  episodeId String
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  storageId String
+  storage Storage @relation(fields: [storageId], references: [id])
+  filename String
+  totalBytes BigInt
+  receivedBytes BigInt @default(0)
+  state String @default("UPLOADING")
+  progress Int @default(0)
+  error String?
+  chunkHashes String[] @default([])
+  stageDetail String @default("")
+  stageProgress Float @default(0)
+  stageBytes BigInt @default(0)
+  stageTotalBytes BigInt @default(0)
+  speedBps Float @default(0)
+  heartbeatAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Playback {
+  id String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episodeId String
+  preview Boolean @default(false)
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+model Saved {
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  titleId String
+  title Title @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@id([userId, titleId])
+}
+model Progress {
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episodeId String
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  seconds Float
+  updatedAt DateTime @updatedAt
+  @@id([userId, episodeId])
+}
+model Collection {
+  id String @id @default(cuid())
+  name String
+  position Int @default(0)
+  enabled Boolean @default(true)
+  items CollectionItem[]
+}
+model CollectionItem {
+  collectionId String
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  titleId String
+  title Title @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  position Int
+  @@id([collectionId, titleId])
+}
+model Audit {
+  id String @id @default(cuid())
+  actor String
+  action String
+  target String
+  createdAt DateTime @default(now())
+}
+
+model DriveConnection {
+  id String @id
+  tokenEncrypted String
+  updatedAt DateTime @updatedAt
+}
+model DriveImport {
+  id String @id @default(cuid())
+  adminId String
+  uploadId String @unique
+  fileId String
+  expected Json
+  state String @default("QUEUED")
+  error String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

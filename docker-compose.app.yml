@@ -1,0 +1,72 @@
+services:
+  api:
+    build:
+      context: .
+      args:
+        API_INTERNAL_URL: http://api:4000
+        GATEWAY_INTERNAL_URL: http://gateway:4001
+    image: yoru-local
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://yoru:yoru_local_only@postgres:5432/yoru
+      REDIS_URL: redis://redis:6379
+      PYTHON_BIN: /opt/hf/bin/python
+      DATA_DIR: /app/data
+      NODE_ENV: development
+      PORT: 4000
+    command: sh -c "npm run db:push && npm run db:seed && npm run start:api"
+    ports: ['127.0.0.1:4000:4000']
+    volumes: ['media:/app/data']
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+  worker:
+    image: yoru-local
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://yoru:yoru_local_only@postgres:5432/yoru
+      REDIS_URL: redis://redis:6379
+      PYTHON_BIN: /opt/hf/bin/python
+      DATA_DIR: /app/data
+      FFMPEG_BIN: ffmpeg
+      FFPROBE_BIN: ffprobe
+    command: npm run start:worker
+    volumes: ['media:/app/data']
+    depends_on: [api]
+  web:
+    image: yoru-local
+    env_file: .env
+    environment:
+      PORT: 3000
+      API_INTERNAL_URL: http://api:4000
+      GATEWAY_INTERNAL_URL: http://gateway:4001
+    command: npm run start:web
+    ports: ['127.0.0.1:3000:3000']
+    depends_on: [api, gateway]
+  backup:
+    image: yoru-local
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://yoru:yoru_local_only@postgres:5432/yoru
+      PYTHON_BIN: /opt/hf/bin/python
+      DATA_DIR: /app/data
+    command: node scripts/hf-backup.cjs daemon
+    volumes: ['media:/app/data']
+    depends_on: [api]
+  gateway:
+    image: yoru-local
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://yoru:yoru_local_only@postgres:5432/yoru
+      REDIS_URL: redis://redis:6379
+      PYTHON_BIN: /opt/hf/bin/python
+      DATA_DIR: /app/data
+      NODE_ENV: development
+      GATEWAY_PORT: 4001
+    command: npm run start:gateway
+    volumes: ['media:/app/data']
+    depends_on: [api]
+volumes:
+  media:

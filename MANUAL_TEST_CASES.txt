@@ -1,0 +1,713 @@
+YORU — MANUAL TEST CASES
+Prepared for you to execute. None of these cases has been run by the development agent.
+Record: case ID, PASS/FAIL, browser/device, actual result, and screenshot/error text if useful.
+Use Razorpay Test Mode until you are satisfied with payment behavior.
+
+SETUP
+
+SET-01 | Environment setup
+Action: Run npm run setup:env, then run it again.
+Expected: First run creates .env with a 64-character MASTER_KEY. Second run preserves the existing file and key.
+
+SET-02 | Admin bootstrap
+Action: Set admin email/password, start the configured database, apply the schema, and seed.
+Expected: One admin is created. Repeating seed does not duplicate the admin or reset its password.
+
+SET-03 | Missing configuration
+Action: Start the API with an absent or invalid MASTER_KEY.
+Expected: Startup stops with a configuration message. It does not use an insecure default key.
+
+SET-04 | Local startup
+Action: Start PostgreSQL, Redis, API, media gateway, worker and website using README instructions.
+Expected: Website opens at localhost:3000; admin can sign in; admin pages load.
+
+SET-05 | Design preview
+Action: Run only the web server and open /preview.
+Expected: Original artwork and responsive catalog design are visible. A preview label appears. No upload, purchase or playback is falsely reported as successful.
+
+SET-06 | Initial content
+Action: Seed with SEED_SHOWCASE=true, then inspect the catalog.
+Expected: Three fictional artwork-only titles are clearly labeled. They cannot be purchased or streamed.
+
+AUTHENTICATION AND MEMBERSHIP
+
+AUTH-01 | Correct and incorrect login
+Action: Sign in with valid credentials, then try an incorrect password.
+Expected: Valid login opens the library. Incorrect login gives an error without granting a session.
+
+AUTH-02 | Invitation creation
+Action: Admin creates an invitation with a friend's email.
+Expected: A link appears for manual sharing; no email is sent automatically.
+
+AUTH-03 | Invitation acceptance
+Action: Open that link in another browser and register using the matching email and a 12+ character password.
+Expected: A member account is created and signed in; it has no admin role.
+
+AUTH-04 | Invitation restrictions
+Action: Reuse an invitation; use an expired invitation; register with an email different from the invitation's email.
+Expected: Each attempt is refused. The valid account remains unchanged.
+
+AUTH-05 | No public signup
+Action: Call the join endpoint without a valid invite.
+Expected: Registration is refused.
+
+AUTH-06 | Admin authorization
+Action: As a member, navigate to /admin and attempt an admin API request directly.
+Expected: UI explains admin access is required; API returns an authorization error.
+
+AUTH-07 | Logout
+Action: Sign out, then use browser Back and request catalog or playback data.
+Expected: Protected requests require login. The previous session cannot access media.
+
+AUTH-08 | Disable a member
+Action: Admin disables a member who has an active playback session.
+Expected: Existing sessions are revoked; further media requests and login attempts fail. Re-enabling permits a fresh login.
+
+AUTH-09 | Password change
+Action: Change password from Account and try old sessions on another device.
+Expected: All sessions are revoked. Old password fails; new password works.
+
+AUTH-10 | Login throttling
+Action: Make more than 20 login/join attempts within 15 minutes from the same connection.
+Expected: Further attempts are temporarily refused.
+
+AUTH-11 | Cross-origin mutations
+Action: Submit a modifying API request with an unrelated Origin header.
+Expected: Request is rejected, except correctly signed Razorpay webhooks which use their separate verification.
+
+AUTH-12 | Authenticator setup
+Action: In Account, enter current password, add the displayed key to an authenticator, and enter its current code.
+Expected: MFA is enabled only after a valid code; eight recovery codes are displayed once.
+
+AUTH-13 | MFA login
+Action: Sign out and sign in with no code, an incorrect code, and then a valid current code.
+Expected: Missing/incorrect codes fail. Valid code succeeds. Reusing a consumed TOTP code immediately fails.
+
+AUTH-14 | Recovery codes
+Action: Sign in with one recovery code, then reuse it.
+Expected: It succeeds once only. Remaining-code count decreases.
+
+AUTH-15 | MFA disable
+Action: Attempt to disable MFA with an incorrect password/code, then valid credentials and a fresh code.
+Expected: Incorrect credentials fail. Valid credentials disable MFA and invalidate saved recovery codes.
+
+CATALOG AND DESIGN
+
+UI-01 | Screen sizes
+Action: Open discovery, browse, detail, library, login and admin at approximately 390px, 768px and 1440px widths.
+Expected: Content stays usable; main pages have no unintended horizontal overflow; tables/carousels scroll where intended.
+
+UI-02 | Keyboard navigation
+Action: Navigate links, buttons, filters and dialogs using Tab, Enter and Escape.
+Expected: Focus is visible, controls operate, dialogs close on Escape and background focus stays outside active interaction.
+
+UI-03 | Text enlargement and motion
+Action: Increase browser zoom to 200% and enable reduced-motion preference.
+Expected: Text remains readable and essential controls usable; motion is reduced.
+
+UI-04 | Search and filters
+Action: Search by part of a title or genre; combine category, format, language and access filters.
+Expected: Matching titles appear. Empty results show a useful message. Clearing filters restores titles.
+
+UI-05 | Watchlist
+Action: Save and remove a title; refresh; sign in on another device.
+Expected: Watchlist follows the account and remains consistent.
+
+UI-06 | Featured title
+Action: Mark a published title as featured.
+Expected: Discovery uses a featured title for its hero. With multiple featured titles, the newest eligible title is selected.
+
+UI-07 | Restricted/expired title
+Action: Unpublish a title or set availability to a past time, then access its detail URL as a member.
+Expected: It is absent from browse and cannot be played or purchased.
+
+UI-08 | Artwork loading
+Action: Upload portrait and landscape images and inspect cards, hero and mobile detail views.
+Expected: Images crop cleanly; text remains readable over backdrops.
+
+CONTENT ADMINISTRATION
+
+ADM-01 | Create a movie
+Action: Add a movie with metadata, artwork and languages.
+Expected: It is created as a draft with one movie-file entry and free pricing by default.
+
+ADM-02 | Create a series
+Action: Add a series, then add episodes in multiple seasons.
+Expected: Episodes sort by season and episode number. Duplicate season/episode numbers are refused.
+
+ADM-03 | Publication gate
+Action: Try to publish a title with missing or still-processing media.
+Expected: Publishing is refused until every episode has a ready asset.
+
+ADM-04 | Edit metadata
+Action: Edit name, synopsis, genres, languages, artwork and availability.
+Expected: Changes persist after reload. Format cannot be changed after creation.
+
+ADM-05 | Artwork validation
+Action: Upload a PNG/JPEG/WebP, a file over 8 MiB, and a renamed non-image file.
+Expected: Valid images work. Oversized or unsupported content is rejected.
+
+ADM-06 | Pricing
+Action: Set free, purchase and rental modes. Try paid price below ₹1 and rental duration below 1 hour.
+Expected: Valid options save. Invalid paid prices/durations are rejected. Free mode stores zero price.
+
+ADM-07 | Preserve earlier access
+Action: Purchase a title, then change its price and access mode as admin.
+Expected: Existing purchased access remains valid; new orders use the updated product and price.
+
+ADM-08 | Series access
+Action: Purchase a series, then have admin unpublish it, add/process a new episode, and republish.
+Expected: The existing purchaser can access the newly added episode under that title.
+
+ADM-09 | Carousel ordering
+Action: Create a carousel, select titles, reorder by drag-and-drop and arrow buttons, then save.
+Expected: The home carousel reflects the saved order. Duplicate title entries are prevented.
+
+ADM-10 | Hidden collection entries
+Action: Hide a carousel or unpublish a title included in a carousel.
+Expected: Hidden carousel disappears. Unpublished titles do not appear to members.
+
+STORAGE AND UPLOADS
+
+STO-01 | Add valid HF connection
+Action: In Admin > Storage, find your HF account using a valid token and create a new bucket or select an existing one.
+Expected: The connection is saved and reads as CONNECTED. Saved token is never returned in responses.
+
+STO-02 | Invalid connection
+Action: Use an incorrect token or bucket name.
+Expected: A useful error appears and no working connection is falsely reported.
+
+STO-03 | Multiple accounts
+Action: Add two storage connections and explicitly select each for different uploads.
+Expected: Assets are placed in the selected buckets and both are playable after publication.
+
+STO-04 | Pause uploads
+Action: Pause a connection that already holds media.
+Expected: It cannot receive newly created uploads; existing playback remains available.
+
+STO-05 | Token rotation
+Action: Replace a connection token with another valid scoped token.
+Expected: New uploads and existing asset downloads use the new token. Old token is never displayed.
+
+UPL-01 | Upload and processing
+Action: Upload a short supported video.
+Expected: Staging upload progresses; worker reports ENCODING, ENCRYPTING, TRANSFERRING, VERIFYING, then READY. Title remains draft until explicitly published.
+
+UPL-02 | Resume
+Action: Pause or interrupt an upload, reopen its upload dialog, and select the exact same file.
+Expected: Upload continues from the server-confirmed byte offset instead of restarting or duplicating bytes.
+
+UPL-03 | Invalid offset
+Action: Send a chunk with an incorrect offset or a chunk larger than 8 MiB.
+Expected: Server rejects it without advancing the recorded offset.
+
+UPL-04 | Premature finalization
+Action: Call complete before all declared bytes have arrived.
+Expected: Upload remains incomplete; no encode job is accepted.
+
+UPL-05 | Admin-only upload
+Action: As a member, attempt creation, chunk upload, completion and artwork upload.
+Expected: All are refused by server-side authorization.
+
+UPL-06 | Unsupported video / missing FFmpeg
+Action: Upload invalid video content or use an invalid FFmpeg path in a disposable setup.
+Expected: Job fails with a useful status; partial media is not published. Source remains available for retry.
+
+UPL-07 | Retry processing
+Action: Correct a processing/storage issue and click Retry processing.
+Expected: Processing resumes as a queued job and can reach READY. It does not create extra episode records.
+
+UPL-08 | Public ciphertext inspection
+Action: Download a stored .bin file directly from the HF bucket and try opening it as video.
+Expected: It contains encrypted data and is not playable. Source filenames and plaintext playlists are absent from the bucket.
+
+UPL-09 | Ciphertext integrity
+Action: In a disposable test title only, alter one encrypted object and request that segment after its short cache expires.
+Expected: Authentication fails; tampered plaintext is not delivered. Restore the object afterward.
+
+UPL-10 | Draft preview
+Action: As admin, preview READY media before publishing. Attempt the same preview as a member.
+Expected: Admin preview works; member preview is refused. Draft preview does not grant public access.
+
+UPL-11 | Replace media
+Action: Unpublish a title, replace its media, preview it and republish.
+Expected: New media becomes playable while purchases and watchlist entries remain attached to the title. Old remote ciphertext is not automatically deleted.
+
+UPL-12 | Subtitle upload
+Action: Upload a valid WebVTT file with a language label, then try a non-WebVTT file.
+Expected: Valid subtitles are encrypted, stored and available in the player. Invalid text is rejected.
+
+PLAYBACK
+
+PLY-01 | Free viewing
+Action: Sign in as a member and open a published free title.
+Expected: Playback works without Razorpay configuration or a payment record.
+
+PLY-02 | Purchase gate
+Action: Open a paid title without access and attempt its playback endpoint directly.
+Expected: Both UI and server enforce access. Hiding the button is not the only protection.
+
+PLY-03 | Adaptive quality
+Action: Play a high-resolution source; choose quality levels and Auto; vary connection speed.
+Expected: Available resolutions correspond to source size; quality switching and seeking work. No higher-resolution upscaling appears.
+
+PLY-04 | Multiple audio tracks
+Action: Upload media with multiple audio streams and switch tracks during playback.
+Expected: Selected audio plays. HLS.js browsers remember the selected track label where available. Safari native controls expose supported tracks.
+
+PLY-05 | Subtitles
+Action: Enable, disable and switch uploaded subtitle tracks.
+Expected: Correct text appears in sync and Off hides captions.
+
+PLY-06 | Progress
+Action: Watch at least 20 seconds, pause, leave and reopen from another device.
+Expected: Progress is saved and playback resumes near that position. Completed titles start again rather than resuming at the final seconds.
+
+PLY-07 | Intro and next episode
+Action: Set intro timestamps, play through the intro window, press Skip intro and then open Next episode.
+Expected: Skip appears only within the configured interval. Next episode follows season/episode ordering.
+
+PLY-08 | Data saver
+Action: Enable data saver, reload, and open another episode.
+Expected: HLS.js automatic quality is capped to the lowest rendition and preference persists locally. Native HLS behavior follows browser controls.
+
+PLY-09 | Session ownership
+Action: Copy a playback URL to another account or signed-out browser.
+Expected: Playback is refused because the session is bound to the original account.
+
+PLY-10 | Session expiration
+Action: Expire a playback session in a disposable database or wait for its four-hour lifetime.
+Expected: Further segment requests fail; reopening the stream obtains a fresh authorized session.
+
+PLY-11 | Concurrent sessions
+Action: Sequentially open three playback sessions for one account.
+Expected: The oldest session is retired so two recent sessions remain.
+
+PLY-12 | Availability change during viewing
+Action: Admin unpublishes a title while a member watches it.
+Expected: Subsequent media requests are refused; already buffered seconds may continue briefly.
+
+PLY-13 | Browser coverage
+Action: Try your intended Android Chrome, iPhone Safari, desktop Chrome/Edge/Firefox devices.
+Expected: Playback, seeking, fullscreen, audio and subtitle controls operate as supported by each browser.
+
+PLY-14 | Watermark privacy
+Action: Inspect the player watermark.
+Expected: It shows an opaque account identifier, never the viewer's email. It is understood to be a removable deterrent, not DRM.
+
+PAYMENTS — USE RAZORPAY TEST MODE
+
+PAY-01 | Missing provider configuration
+Action: Open checkout with Razorpay keys absent.
+Expected: Clear configuration error; no fake successful purchase or entitlement.
+
+PAY-02 | Successful purchase
+Action: Buy a published purchase-mode title using Test Mode checkout.
+Expected: Server verifies signature, expected amount/currency and captured state; exactly one entitlement is created and playback unlocks.
+
+PAY-03 | Checkout canceled or failed
+Action: Close checkout or use a failure scenario.
+Expected: No entitlement is granted; user can retry.
+
+PAY-04 | Authorized but not captured
+Action: Use a scenario with a payment remaining authorized.
+Expected: It does not grant viewing access until capture is verified.
+
+PAY-05 | Signature tampering
+Action: Modify the payment signature, payment ID or local order ID in a verification request.
+Expected: Server rejects mismatch or ownership violation.
+
+PAY-06 | Amount tampering
+Action: Change a client-supplied price or attempt to associate a payment for another amount/currency.
+Expected: Server uses its stored product price and rejects mismatched payment details.
+
+PAY-07 | Duplicate verification/webhook
+Action: Replay a valid verification or webhook event multiple times.
+Expected: No duplicate entitlement or duplicate charge is created.
+
+PAY-08 | Webhook signature and raw body
+Action: Send an unsigned webhook or alter a signed payload.
+Expected: It is refused. A correctly signed supported event is processed.
+
+PAY-09 | Delayed webhook
+Action: Complete checkout before its webhook arrives, then deliver the webhook later.
+Expected: Server API verification can grant access, and later reconciliation does not duplicate it.
+
+PAY-10 | Rental timing
+Action: Buy a rental and inspect its expiry in My library.
+Expected: Expiry is based on the configured hours from payment reconciliation. After expiry, new playback and segment requests are refused.
+
+PAY-11 | Refund
+Action: Admin requests a full refund and confirms the dialog.
+Expected: Razorpay receives the refund request. When confirmed/reconciled, order becomes REFUNDED and its entitlement is revoked.
+
+PAY-12 | Refund followed by stale capture event
+Action: Deliver a capture event after a processed refund.
+Expected: Current provider state and local order state prevent access from being re-granted.
+
+PAY-13 | Existing access
+Action: Attempt to purchase a title already covered by an active entitlement.
+Expected: Duplicate purchase is refused while access remains active.
+
+PAY-14 | Purchase records
+Action: Compare member purchase history with admin order list after purchase/rental/refund.
+Expected: Amounts, titles, dates and statuses agree. Members see only their own orders.
+
+RECOVERY AND OPERATIONS
+
+OPS-01 | Worker restart
+Action: Restart the worker while a job is queued or processing in a disposable setup.
+Expected: Queue recovery/retries complete the job or report failure; the title is never prematurely published.
+
+OPS-02 | Storage outage
+Action: Temporarily revoke a test connection token and request uncached media.
+Expected: Playback reports a failure without exposing the token. Restoring access and retrying recovers playback.
+
+OPS-03 | Restore backup
+Action: In a separate environment, restore the database, artwork, media objects and same MASTER_KEY.
+Expected: Saved connections and media keys decrypt correctly. A different master key cannot decrypt them.
+
+OPS-04 | Logs and responses
+Action: Inspect normal API responses and failure logs.
+Expected: No HF tokens, Razorpay secret, MFA secrets, media keys, master key or passwords are returned/logged accidentally.
+
+OPS-05 | HTTPS/private sharing setup
+Action: Configure the final origin and HTTPS per README, invite a friend and play a title.
+Expected: Cookie security, invitation URLs, same-origin API proxying and playback all use the configured origin.
+
+ADMIN BUCKET SETUP AND COMPLETION CHECKS (not executed)
+
+BUCKET-01 | Create a bucket inside the admin studio
+Action: Open Storage & buckets > Add HF account. Enter a valid write-enabled token, find the account, select Create a new bucket, enter a unique name and choose Public.
+Expected: The bucket is created on HF and saved as a connected storage destination. No external bucket creation step is needed.
+
+BUCKET-02 | Existing buckets and multiple accounts
+Action: Connect an existing bucket, then repeat with a second HF account and an organization for which the token has write permission.
+Expected: Each connection appears independently and can be selected for uploads. Saved tokens are never returned to the browser.
+
+BUCKET-03 | Invalid token and missing dependencies
+Action: Try an invalid token. In a disposable native environment, configure an invalid PYTHON_BIN or omit the HF SDK.
+Expected: An actionable error appears in the dialog; no connection is falsely marked ready.
+
+BUCKET-04 | Duplicate name and insufficient permissions
+Action: Create an already-existing bucket or use a token without creation permission.
+Expected: Creation fails clearly. Connect existing can recover a bucket created remotely if saving the local connection was interrupted.
+
+BUCKET-05 | Additional bucket and visibility
+Action: Use New bucket on a saved connection, then change the new bucket from public to private and back.
+Expected: Creation uses the stored account token. Playback remains authenticated through Yoru in both modes; HF receives only encrypted media objects.
+
+COPY-01 | Encrypted backup copy
+Action: Open Content > an uploaded episode > Storage copies. Choose another bucket and Keep as a backup copy.
+Expected: The worker progresses through COPY/VERIFY stages to READY. Destination objects are encrypted .bin files.
+
+COPY-02 | Playback fallback
+Action: After COPY-01 is READY, temporarily revoke the primary token and play uncached segments.
+Expected: The gateway falls back to the completed copy. Restoring the token restores primary access after the short failure backoff.
+
+COPY-03 | Primary migration
+Action: Copy an episode with Use destination as primary storage selected.
+Expected: Only a completed copy becomes primary. The former primary remains a backup; no remote objects are deleted.
+
+COPY-04 | Media changes during copy
+Action: Add subtitles or replace media while a copy is running.
+Expected: An outdated copy is not attached as a valid replica. Queue a new copy after the change. Existing replicas are invalidated when media/subtitles change.
+
+FINISH-01 | Upload cancellation
+Action: Pause a partially uploaded file, cancel it in the queue, then start another upload for that episode.
+Expected: The cancelled upload cannot resume or process. A fresh upload is allowed. Actively processing jobs cannot be cancelled by this control.
+
+FINISH-02 | Episode edits
+Action: Edit episode name, season, number and intro timestamps. Try duplicate episode numbering and an intro beyond the media duration.
+Expected: Valid changes persist; invalid ranges or duplicate entries produce clear errors.
+
+FINISH-03 | Home watchlist
+Action: Add and remove the featured title using the home watchlist button, then inspect My library and the title page.
+Expected: Watchlist state persists and agrees across pages; the button performs the action directly.
+
+FINISH-04 | Viewing preferences
+Action: Toggle spoiler protection and autoplay in Account. Open an unwatched episode list and play an episode to its end.
+Expected: Names follow the spoiler preference. With autoplay enabled, the next playable episode opens; browser policy may require Play. Disabled autoplay leaves the current episode open.
+
+FINISH-05 | Subtitle preference and data saver
+Action: Select a subtitle track, open another episode with the same label, then turn subtitles off. Enable data saver in an HLS.js browser.
+Expected: Subtitle choice is restored where available; Off persists. Data saver caps adaptive playback to the lowest rendition. Native HLS does not show the custom data-saver control.
+
+FINISH-06 | Existing installation upgrade
+Action: Back up the database and key, stop processes, generate Prisma client, apply schema per README and restart all four application processes.
+Expected: Existing configuration, accounts and content remain. API, gateway, worker and web share the correct environment. Do not accept destructive migration warnings without reviewing them.
+
+FINISH-07 | Older unfinished uploads
+Action: Create more than twelve upload records with an older paused or failed upload, then open Upload queue.
+Expected: All unfinished/failed uploads remain accessible alongside the latest fifty completed/cancelled records.
+
+FINISH-08 | Concurrent upload actions
+Action: Attempt completion and cancellation from separate admin tabs for the same upload.
+Expected: Actions serialize through the upload lock; a busy message permits retry without processing a cancelled source.
+
+DB-01 | Supabase connection and admin pages
+Action: Restart all processes after updating DATABASE_URL. Sign in and open Content library, Storage and an episode's Storage copies.
+Expected: No missing-table errors. All screens load against the configured Supabase database.
+
+DB-02 | Actionable database errors
+Action: In a disposable database only, use an outdated schema or an unavailable database endpoint.
+Expected: API returns a clear 503 error for missing tables/columns or connection failures. Logs include a Prisma error code without credentials or query parameters.
+
+LIVE UPLOAD DETAILS AND RECOVERY (not executed)
+
+REC-01 | Detail page and live state
+Action: Start a video upload. Navigate to the queue and click View live details.
+Expected: File details, saved bytes, chunk count, stage, progress, speed and errors refresh. Internal navigation does not stop the browser sender. Bytes in flight are distinguished from saved bytes.
+
+REC-02 | Browser close and file identity
+Action: Close the browser during upload. Reopen the file's detail page and reselect the original file. Also try a different file with the same name and size.
+Expected: The original resumes from the saved offset; the changed file is rejected by content hashes. No original prefix is overwritten by a different file.
+
+REC-03 | API stopped during a chunk
+Action: Stop the API during a chunk transfer, wait, then restart it with the same database and DATA_DIR.
+Expected: The browser retries. The incomplete chunk is resent. The server never acknowledges a skipped or incomplete chunk.
+
+REC-04 | Response lost after acknowledgement commit
+Action: Interrupt a response after the chunk was saved and its database offset committed, then reconnect/resume.
+Expected: Reading the saved offset or re-sending the matching chunk recovers without duplicate appended bytes.
+
+REC-05 | Chunk corruption
+Action: Send a changed byte in an otherwise correctly sized chunk using a disposable upload.
+Expected: Checksum validation rejects it; receivedBytes does not advance. The correct original chunk succeeds when resent.
+
+REC-06 | Worker interrupted during encoding
+Action: Stop and restart the worker after at least one rendition is complete.
+Expected: Completed renditions are verified and reused. Only an interrupted rendition is rebuilt; no second source upload is needed.
+
+REC-07 | Worker interrupted during encryption
+Action: Stop and restart the worker after some encrypted segment checkpoints are saved.
+Expected: The same key and saved ciphertext objects are reused. Remaining segments are encrypted and processed.
+
+REC-08 | HF transfer interruption
+Action: Interrupt the worker or HF connectivity between transfer batches, then restore it.
+Expected: Confirmed batches remain recorded. The uncertain batch may be resent to the same object names; later batches continue. Progress shows confirmed bytes and batch throughput.
+
+REC-09 | Remote verification failure
+Action: Damage or remove a disposable HF object before its verification finishes.
+Expected: Verification fails visibly; the asset never becomes READY with a failed object. Retry re-uploads the affected batch and rechecks it.
+
+REC-10 | Missing Redis job recovery
+Action: In a disposable setup, remove a queued upload job without deleting its database record or staging data, then start the worker.
+Expected: The worker recreates the missing job during startup or its next recovery pass.
+
+REC-11 | Stale status and bounded retries
+Action: Stop the worker; then simulate persistent processing errors across retries.
+Expected: Details indicate a stale heartbeat while stopped. Exhausted retries show FAILED and a Retry from checkpoints action, preserving working data.
+
+REC-12 | Disk integrity and legacy uploads
+Action: In a disposable setup, remove acknowledged source bytes or change a saved rendition. Separately resume a pre-upgrade partial upload with the original source.
+Expected: Missing/corrupted saved data fails explicitly rather than padding or skipping bytes. The legacy upload verifies its saved prefix before attaching a checksum manifest.
+
+REC-13 | Queue failure/database mismatch after restart
+Action: In a disposable setup, let a job fail for exceeding the stalled limit while its database state remains ENCODING, then restart the worker.
+Expected: Recovery detects the failed queue job and retries from checkpoints up to three recovery attempts. If recovery is exhausted, the database becomes FAILED with a visible retry action rather than remaining stale ENCODING.
+
+REC-14 | Connection outage diagnostics and polling
+Action: Temporarily interrupt Supabase/Redis connectivity in a disposable setup while upload details are open.
+Expected: Polling does not overlap requests. Redis API operations time out rather than queue indefinitely. Worker logs distinguish lock loss, connectivity, authentication and quota errors without secrets.
+
+END OF CHECKLIST
+
+HF-RECOVERY-05 | Verification network interruption
+Action: On a disposable upload, interrupt connectivity while remote verification is running, then restore connectivity and retry.
+Expected: Previously acknowledged uploads remain acknowledged. Completed verification checkpoints are reused. Only downloaded data that fails checksum/authentication causes its batch to be re-uploaded.
+
+HF-BACKUP-06 | Backup credential refresh
+Action: Update BACKUP_HF_TOKEN in .env while the native backup scheduler is running.
+Expected: The next scheduled backup uses the new credential. No token is printed in logs or API responses.
+
+HF-RETRY-01 | Interrupted HF transfer
+Action: Retry the failed upload from its details page.
+Expected: Saved renditions and ciphertext are reused. A transient HF connection reset retries the same batch, with the same object names. Persistent network errors explicitly identify the connection failure, while HTTP 401/403 remain permission errors.
+HF-RETRY-02 | Encrypted backup
+Action: After connectivity is restored, run npm run db:backup.
+Expected: A successful timestamp appears; database-latest.bin is encrypted. No artwork is included.
+
+
+HF-RETRY-03 | Bounded transfer batches
+Action: Resume the interrupted upload.
+Expected: Each new batch contains at most 64 objects or 64 MiB (a single larger object remains one batch). Confirmed batches remain checkpointed. Transient connection failures show the bounded retry attempt in live details and reuse identical ciphertext/object names.
+
+
+HF-RETRY-04 | Token rotation during a job
+Action: Rotate the HF credential in Admin while a disposable upload is transferring.
+Expected: The next batch reads the current saved credential. A 401 retries once with a changed credential; an unchanged rejected token stops with an authentication error. It does not rotate tokens for rate limits or network resets.
+
+
+PLAY-PERF-01 | First playback and warm cache
+Action: Open the published movie, then reopen the same section within 15 minutes.
+Expected: Playback uses reusable download processes. Recently fetched encrypted segments are reused from the bounded memory cache.
+PLAY-PERF-02 | Seeking and resume
+Action: Watch a section, reopen the movie, and seek forward/backward.
+Expected: Playback starts at the saved position and missing segments load without fetching the beginning first. Upcoming segments are prefetched.
+PLAY-PERF-03 | Access protection
+Action: Try playback with an expired session or an account without access to a paid title.
+Expected: Requests are rejected even if the ciphertext is already cached.
+PLAY-PERF-04 | Download interruption
+Action: Interrupt connectivity on a disposable playback session, then reconnect and reopen it.
+Expected: Failed/timed-out download processes are replaced; no permanent stuck queue or plaintext cache is created.
+
+
+PLAYER-CTRL-01 | Playback controls
+Action: Play/pause, skip forward/back 10 seconds, drag the timeline, adjust volume and mute.
+Expected: Time, buffered progress and buttons match playback; seeking remains within the movie.
+PLAYER-CTRL-02 | Large seek
+Action: While playing at 5 minutes, jump directly to 50 minutes, then jump back.
+Expected: Unbuffered seeks cancel the browser's old-position downloads and request the destination. Foreground downloads have queue priority and two reserved workers. Cold Hugging Face fetches can still take time.
+PLAYER-CTRL-03 | Audio language
+Action: Open Settings on a movie with multiple audio tracks and switch between them.
+Expected: Available languages appear and audio switches without restarting the movie. Chrome/Edge/Firefox use HLS audio selection; native HLS uses the browser audio-track API when exposed.
+PLAYER-CTRL-04 | Quality and speed
+Action: Select Auto, a fixed quality, data saver and different playback speeds.
+Expected: Playback reflects the selection; data saver caps quality to the lowest rendition.
+PLAYER-CTRL-05 | Captions for this viewing
+Action: Upload valid .srt and .vtt files from Captions; select another track, change caption size, then turn captions off.
+Expected: Uploaded captions appear immediately. Ordinary members only add captions for their own current viewing. Invalid extensions and files larger than 1 MiB show an error.
+PLAYER-CTRL-06 | Admin caption publishing
+Action: As admin, select Save for everyone and upload captions; reopen the movie as another member.
+Expected: Captions are encrypted in storage and available in subsequent playback sessions. Non-admin requests to the saving endpoint are rejected.
+PLAYER-CTRL-07 | Keyboard and touch
+Action: Focus the player and use Space/K, J/L, arrows, M and F; use controls on a narrow phone screen.
+Expected: Shortcuts work when focus is in the player, without interfering with form inputs. Controls reveal on interaction and remain visible while paused.
+PLAYER-CTRL-08 | Display modes
+Action: Try fullscreen, picture-in-picture, picture fit and repeat; use Next episode on a series.
+Expected: Supported display modes work, unsupported features remain hidden or explain their limitation, and Next opens the following available episode.
+
+PLAYER-FIX-01 | Volume endpoint
+Action: Drag the volume slider fully right, then left; mute and adjust volume again.
+Expected: Volume reaches 100% and 0%; adjustment unmutes. Arrow keys on the volume slider adjust volume; End sets 100%.
+PLAYER-FIX-02 | Keyboard focus
+Action: Start playback, click the play/skip/fullscreen buttons, then use Left/Right, J/L, K, M and F. Repeat with the timeline focused.
+Expected: Left/Right and J/L seek exactly 10 seconds from the live position, clamped at the start/end. Shortcuts work after interacting with controls. Space retains native button activation.
+PLAYER-FIX-03 | Rapid skips and form protection
+Action: Click Forward three times quickly, then Back; type in the caption name field.
+Expected: Each click seeks from the current video position; shortcuts do not interrupt typing or settings dropdowns.
+PLAYER-BOOST-01 | Quiet audio amplification
+Action: Play a quiet scene; open Settings > Audio boost and choose 150%, 200%, then 300%. Restore Normal and use mute/volume.
+Expected: Supported browsers amplify audio above normal volume; Normal removes amplification and mute still silences it. Loud audio may distort at high boost. Unsupported browsers show a message.
+
+TITLE-FORMAT-01 | Correct series to movie
+Action: Create a draft series with one uploaded episode, use Edit details to choose Movie and save.
+Expected: Existing media, episode ID and viewing progress remain; numbering becomes season 1 / entry 1. A ready movie can be published.
+TITLE-FORMAT-02 | Movie to series
+Action: Change a draft movie into Series, then add another episode.
+Expected: Original video remains the first entry and new episodes can be added. All entries must finish processing before publishing.
+TITLE-FORMAT-03 | Published and multi-episode safeguards
+Action: Try changing a published title's format, and converting a multi-episode series to Movie.
+Expected: Published titles require unpublishing. Multi-episode conversion is rejected with an explanation; no media is removed.
+TITLE-FORMAT-04 | Details and publish feedback
+Action: Edit title name, synopsis and artwork; attempt publishing with unfinished media.
+Expected: Details save, and the publish error identifies unfinished entries and points to Edit details for format correction.
+
+ART-PERSIST-01 | Artwork survives redeployment
+Action: Upload poster/backdrop, save the title, let the database backup succeed, then redeploy after all video jobs reach READY.
+Expected: The same /api/artwork URLs fetch encrypted objects from BACKUP_HF_BUCKET when the local cache is absent. Never delete the artwork/ prefix from the bucket.
+ART-PERSIST-02 | Failed persistent upload
+Action: Attempt artwork upload with an invalid backup token.
+Expected: Upload fails instead of returning a temporary-only URL. Restore the token and retry.
+CAROUSEL-01 | Featured banner
+Action: Mark two published titles as Featured. Use previous/next and wait eight seconds with the pointer away from the banner.
+Expected: Banner title, artwork, links and counter change together. Rotation pauses on hover, keyboard focus and hidden tabs. One featured title remains a single banner.
+CAROUSEL-02 | Collection shelf
+Action: Enable a carousel collection with enough published titles to overflow; use its arrows and swipe on mobile.
+Expected: The row scrolls and arrows disable at the ends. Draft titles are not shown.
+
+HOME-CURATION-01 | Admin collections drive banner
+Action: Create an enabled carousel, arrange published titles and save; reload Home.
+Expected: Home banner uses enabled collection titles in saved collection/item order, with duplicates removed. Hidden collections and draft titles are excluded. Deleting a collection removes its banner/shelf entries without deleting movies.
+TITLE-PAGE-01 | Full-page title editor
+Action: Click New title or Edit details; refresh the page and edit name, category, format, genres, languages, rating, availability, artwork and notes.
+Expected: Full-page URLs remain usable after refresh, form saves all details and Cancel returns to the content library. Non-admins cannot edit.
+LIVE-ACTION-01 | Normal movies and category editing
+Action: Create a Movie with Live action category; change an existing draft Anime title to Live action and save.
+Expected: Upload/publish work as for other categories; Browse's Live action filter and badge identify the title correctly. Format is separate from category.
+CINEMA-UI-01 | Cursor, watermark and loading
+Action: Play without moving the pointer for three seconds, move it again; use Settings > Show Yoru watermark; reopen playback.
+Expected: Tools and cursor hide together and return on interaction. Watermark defaults hidden and its choice persists on this device. Buffering uses the animated Yoru logo, with reduced-motion preference respected.
+BRAND-01 | New identity
+Action: Open login, header, footer and browser tab.
+Expected: New crescent/play/star logo and matching favicon appear. Hard refresh if the browser cached the old favicon.
+
+DRIVE-01 | Private OAuth connection
+Action: Configure a Google Web OAuth client and test user, connect from Admin > Google Drive, then disconnect/reconnect.
+Expected: Private Drive access is authorized only after Google consent. Tokens are encrypted and absent from browser responses/logs. Invalid/expired/replayed OAuth state is rejected.
+DRIVE-02 | Recursive season preview
+Action: Inspect a private anime folder with Season 1, Season 2, S02E03 files, non-video documents and blocked downloads.
+Expected: All traversed files, folder paths, sizes and video eligibility are displayed; no source videos download yet. Season suggestions are editable.
+DRIVE-03 | Approval and numbering
+Action: Select specific episodes, correct names/seasons/numbers, pick a draft Series and HF destination, then approve.
+Expected: Only approved files receive import jobs. Duplicate episode numbers, already-uploaded episodes, paused storage and published destinations are rejected without partial creation.
+DRIVE-04 | Server transfer and integrity
+Action: Import a video and follow Upload queue.
+Expected: Server downloads exact byte ranges, acknowledges after disk flush, verifies Google checksum when available, then converts/encrypts/uploads with existing processing. Laptop downloads no video.
+DRIVE-05 | Connection interruption
+Action: Interrupt a disposable import, then use Retry download.
+Expected: Saved acknowledged chunks resume on the same disk; missing source files cause download to restart. No partially verified file enters processing.
+DRIVE-06 | Permissions and changed source
+Action: Use a download-blocked file, expired preview, or change a file after preview.
+Expected: Import is rejected or stopped with a clear error. OAuth does not override owner's restrictions.
+DRIVE-07 | Disk, cancel and queue recovery
+Action: Cancel a disposable download, import with insufficient space, and restart with pending imports.
+Expected: Cancellation is retained; low space gives an actionable error; durable import records rebuild missing queue jobs. Completed download conversion is prioritized before another import download.
+SEQUENCE-01 | Bulk episode name cleanup
+Action: Open Clean up episode names for a season containing Death Note - 01x01 - Rebirth.mkv and similarly named 01x02 and S01E03 episodes. Preview, edit results and save.
+Expected: Each changing episode marker is removed; other title text and extensions remain. Episode numbers, video assets, uploads and progress remain unchanged. Reset restores original names and Cancel saves nothing. A changed season membership rejects a stale save.
+QUEUE-01 | Active title grouping
+Action: Import multiple episodes for one series; finish one while another is processing. Expand the title card.
+Expected: Completed and pending episodes remain together; when all submitted uploads are READY or CANCELLED the title moves out of active view. Failed uploads remain available for retry/cancel.
+QUEUE-02 | Date history and pagination
+Action: Select a submission date, including near local midnight; clear the date and browse more than 100 records.
+Expected: Only records submitted on the selected local date appear; navigation reaches older history without deleting records.
+SEASON-01 | Season dropdowns
+Action: Manage a series with seasons 1 and 2 and out-of-order episode numbers.
+Expected: Separate expandable seasons show only their episodes in numeric order. Edit, upload and preview actions still target the correct episode.
+MONITOR-01 | Resource monitor
+Action: Open System monitor while processing media and refresh bucket usage.
+Expected: CPU/RAM/disk and queue counts refresh; bucket visibility, size, file count and timestamp appear separately. Access failures show unavailable and totals exclude failed buckets. No worker is started automatically.
+SKIP-01 | Chapter metadata and manual timing
+Action: Process an anime episode with named opening/ending chapters, and another without them. Edit episode timing manually.
+Expected: Valid chapter timings are detected only for anime series, manual timings are preserved, and unmarked intervals stay unset. Enable auto-skip to jump to marked interval ends; disabling it restores normal playback. Post-credit scenes remain accessible.
+SKIP-02 | Legacy backup restore
+Action: Restore a pre-outro-fields encrypted backup into a disposable empty database using the updated schema.
+Expected: Episodes restore with outroStart/outroEnd zero and all existing values preserved.
+CAST-05 | Discovery initialization and permissions
+Action: Open the direct HTTPS site in desktop Chrome, deny then allow local-network access, and open the Cast chooser after SDK readiness.
+Expected: Discovery initializes once before clicking; chooser opens from the click without resetting SDK options. Initialization errors and no-device guidance are visible. Browser permission/router/TV compatibility problems are not presented as successful discovery.
+DRIVE-10 | Source lost after rebuild
+Action: Retry a failed Drive-imported episode whose local source was removed by a rebuild.
+Expected: Retry queues a new download from the original Drive file; source progress resets and normal processing follows. Missing browser-upload sources instead request original-file selection. Active jobs are not duplicated.
+COLAB-01 | GPU handoff
+Action: Create a Colab key and run the notebook with one disposable queued episode.
+Expected: The episode is reserved without duplicate local encoding; source hashes are checked; rendition return hashes match; Yoru encrypts/uploads/verifies and marks READY. Compare audio sync, quality, languages and output size manually.
+COLAB-02 | Interruption and release
+Action: Disconnect Colab during encoding; reconnect the same runtime after lease expiration, or Release Colab job then Retry locally.
+Expected: Retained complete renditions are reused on reclaim. Release prevents further leased writes and permits local processing. A lost Colab runtime restarts the necessary encoding.
+COLAB-03 | Authorization and validation
+Action: Try expired/revoked keys, an unclaimed job, invalid filenames, incomplete playlists and missing segments.
+Expected: Requests are rejected; no remote files or arbitrary filesystem paths are exposed. Revoke stops new API access. App MASTER_KEY/HF credentials/Google OAuth tokens never appear in notebook requests.
+CAST-01 | Device discovery
+Action: Open the public direct HTTPS Space in Chrome, allow local network access, connect a Cast-enabled TV to the same Wi-Fi and choose Cast to TV.
+Expected: Browser device chooser appears; selecting the TV transfers the current video and position. Unsupported browsers or inaccessible streams show an error.
+CAST-02 | Playback and audio synchronization
+Action: Watch dialogue on the TV, seek forward/backward 10 seconds, seek far ahead, pause/play and adjust TV volume.
+Expected: Audio and video remain synchronized after buffering; local playback stays paused. Remote controls affect the TV. Selected audio language is the initial receiver default.
+CAST-03 | Stop and progress
+Action: Cast for more than 15 seconds, stop casting, then reopen the episode.
+Expected: Playback returns to the TV's last position and progress is saved. The stopped capability cannot fetch further media.
+CAST-04 | Access isolation
+Action: Try an invalid/expired capability, disable the casting user or remove their viewing entitlement, and try ordinary media URLs without login.
+Expected: Requests are denied. Casting does not expose HF credentials, media encryption keys or bypass normal member playback authentication.
+DRIVE-09 | Import episodes from title management
+Action: Create an empty draft Series, open Manage, click Import folder from Google Drive, and inspect a folder containing season folders. Review episode numbering, choose HF storage and approve.
+Expected: Current title is preselected, eligible videos are selected automatically, and approval creates all selected episodes with their season numbers before queuing downloads. No manual episode creation is required. Existing media is not replaced.
+BRAND-01 | Supplied orange logo
+Action: Open the home page, login page and player; reload after deploying and check the browser tab icon.
+Expected: The supplied orange ribbon mark appears in navigation, login, cinema loader and favicon. Its background blends with the page.
+DRIVE-08 | Additive backup compatibility
+Action: On a disposable empty destination, restore an old pre-Drive encrypted backup after deploying the new schema.
+Expected: Existing tables restore with row integrity checks; newly added Drive tables start empty. Unknown or other missing tables remain rejected.

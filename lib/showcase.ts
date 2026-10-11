@@ -1,0 +1,80 @@
+import type { Title } from './types';
+const bases = [
+  {
+    id: 'beyond-blue',
+    name: 'Beyond the Blue',
+    synopsis:
+      'A forgotten radio signal. A city above the clouds. One last summer to find the person on the other side.',
+    genres: ['Adventure', 'Sci-fi'],
+    poster: '/art/hero.png',
+    backdrop: '/art/hero.png',
+    category: 'ANIME',
+    format: 'MOVIE',
+    featured: true,
+  },
+  {
+    id: 'crimson-gate',
+    name: 'The Crimson Gate',
+    synopsis:
+      'At the edge of an ancient forest, a guardian discovers that the door she protects was never meant to stay closed.',
+    genres: ['Fantasy', 'Adventure'],
+    poster: '/art/forest.png',
+    backdrop: '/art/forest.png',
+    category: 'ANIME',
+    format: 'SERIES',
+  },
+  {
+    id: 'little-orbit',
+    name: 'Little Orbit',
+    synopsis:
+      'A very small explorer sets out on a very big journey to find a place among the stars.',
+    genres: ['Adventure', 'Family'],
+    poster: '/art/orbit.png',
+    backdrop: '/art/orbit.png',
+    category: 'CARTOON',
+    format: 'MOVIE',
+  },
+  {
+    id: 'after-the-rain',
+    name: 'After the Rain',
+    synopsis: 'Two strangers follow the same train line through a city that remembers every story.',
+    genres: ['Drama', 'Slice of life'],
+    poster: '/art/hero.png',
+    backdrop: '/art/hero.png',
+    category: 'ANIME',
+    format: 'SERIES',
+  },
+  {
+    id: 'forest-of-echoes',
+    name: 'Forest of Echoes',
+    synopsis: 'An unexpected friendship lights the way through a forest of sleeping spirits.',
+    genres: ['Fantasy', 'Mystery'],
+    poster: '/art/forest.png',
+    backdrop: '/art/forest.png',
+    category: 'ANIME',
+    format: 'MOVIE',
+  },
+  {
+    id: 'stardust-club',
+    name: 'The Stardust Club',
+    synopsis:
+      'A mismatched crew of explorers discovers the smallest adventures leave the biggest footprints.',
+    genres: ['Comedy', 'Family'],
+    poster: '/art/orbit.png',
+    backdrop: '/art/orbit.png',
+    category: 'CARTOON',
+    format: 'SERIES',
+  },
+];
+export const showcase = bases.map((x, i) => ({
+  ...x,
+  slug: x.id,
+  year: 2026,
+  ageRating: '13+',
+  languages: ['Japanese', 'English'],
+  status: 'PUBLISHED',
+  showcase: true,
+  featured: x.featured || false,
+  products: [{ id: `product-${i}`, mode: 'FREE', pricePaise: 0, rentalHours: 48 }],
+  episodes: [],
+})) as Title[];

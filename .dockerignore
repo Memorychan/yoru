@@ -1,0 +1,11 @@
+node_modules
+.next
+dist
+data
+.env
+.env.*.local
+.git
+*.log
+*.tsbuildinfo
+.venv
+tools
